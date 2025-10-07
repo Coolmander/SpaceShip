@@ -31,10 +31,6 @@ class SpaceGameServer:
         {"name": "Versorgung", "type": "slider", "color": "grün", "min_value": 0, "max_value": 5},
         {"name": "Stabilisator", "type": "schalter", "color": "rot", "min_value": 0, "max_value": 2},
         {"name": "Hangar", "type": "knopf", "color": "gelb", "min_value": 0, "max_value": 3},
-        {"name": "Reaktor Sicherung", "type": "toggle", "color": "rot", "min_value": 0, "max_value": 1},
-        {"name": "Orbit Dial", "type": "dial", "color": "blau", "min_value": 0, "max_value": 8},
-        {"name": "Andock Taster", "type": "toggle", "color": "gelb", "min_value": 0, "max_value": 1},
-        {"name": "Grav-Justierer", "type": "dial", "color": "grün", "min_value": 0, "max_value": 10},
     ]
 
     def __init__(self):
@@ -195,14 +191,11 @@ class SpaceGameServer:
         min_value = control.get("min_value", 0)
         max_value = control.get("max_value", 3)
 
-        if control["type"] in {"slider", "dial"}:
+        if control["type"] == "slider":
             return random.randint(min_value, max_value)
 
         if control["type"] == "schalter":
             return random.randint(min_value, max_value)
-
-        if control["type"] == "toggle":
-            return random.choice([min_value, max_value])
 
         # knopf
         target = random.randint(min_value + 1, max_value)
@@ -212,21 +205,15 @@ class SpaceGameServer:
         type_labels = {
             "schalter": "Schalter",
             "slider": "Regler",
-            "knopf": "Knopf",
-            "toggle": "Schalter",
-            "dial": "Drehregler",
+            "knopf": "Knopf"
         }
 
         color = control.get("color", "").capitalize()
         label = control.get("label", "Kontrolle")
         type_label = type_labels.get(control.get("type"), "Kontrolle")
 
-        if control["type"] in {"slider", "dial"}:
+        if control["type"] == "slider":
             return (f"{device_id.upper()}: Stelle den {color} {type_label} '{label}' auf Stufe {target_value}.")
-
-        if control["type"] == "toggle":
-            state = "AN" if target_value == control.get("max_value", 1) else "AUS"
-            return (f"{device_id.upper()}: Schalte '{label}' ({color}) auf {state}.")
 
         if control["type"] == "schalter":
             return (f"{device_id.upper()}: Schalte '{label}' ({color}) auf Position {target_value}.")
