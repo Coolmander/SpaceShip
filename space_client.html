@@ -66,6 +66,12 @@
             background: rgba(0, 255, 0, 0.2);
             border-color: #00ff00;
         }
+
+        .status.my-turn {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+            border-color: #00ffff;
+            background: rgba(0, 128, 255, 0.2);
+        }
         
         .problem {
             font-size: 16px;
@@ -196,6 +202,13 @@
             font-size: 24px;
             font-weight: bold;
             color: #00ffff;
+        }
+
+        .button-counter {
+            margin-top: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffcc00;
         }
         
         .button-control {
@@ -356,6 +369,7 @@
                     document.getElementById('deviceId').textContent = deviceId;
                     document.getElementById('connectScreen').style.display = 'none';
                     document.getElementById('mainContainer').style.display = 'flex';
+                    document.getElementById('status').classList.remove('success', 'my-turn');
                     renderControls();
                     break;
                     
@@ -363,13 +377,16 @@
                     document.getElementById('problem').textContent = data.problem;
                     document.getElementById('instruction').textContent = data.instruction;
                     document.getElementById('status').classList.remove('success');
+                    document.getElementById('status').classList.toggle('my-turn', data.target_device === deviceId);
                     break;
-                    
+
                 case 'success':
                     document.getElementById('problem').textContent = data.message;
                     document.getElementById('instruction').textContent = `Punkte: ${data.score}`;
-                    document.getElementById('status').classList.add('success');
-                    
+                    const statusElement = document.getElementById('status');
+                    statusElement.classList.add('success');
+                    statusElement.classList.remove('my-turn');
+
                     // Vibriere bei Erfolg (falls unterstützt)
                     if (navigator.vibrate) {
                         navigator.vibrate([100, 50, 100]);
@@ -385,25 +402,34 @@
             controls.forEach((control, index) => {
                 const box = document.createElement('div');
                 box.className = `control-box ${control.color}`;
-                
+
                 const label = document.createElement('div');
                 label.className = 'control-label';
-                label.textContent = `${control.color.toUpperCase()}\n${control.type.toUpperCase()}`;
+                label.textContent = `${control.label.toUpperCase()}\n(${control.color.toUpperCase()})`;
                 box.appendChild(label);
-                
+
                 if (control.type === 'schalter') {
                     const container = document.createElement('div');
                     container.className = 'switch-container';
-                    
+
                     const button = document.createElement('div');
                     button.className = 'switch-button';
-                    button.textContent = control.position || '0';
+                    const min = control.min_value ?? 0;
+                    const max = control.max_value ?? 3;
+                    if (typeof control.position !== 'number') {
+                        control.position = min;
+                    }
+                    button.textContent = control.position;
                     button.onclick = () => {
-                        control.position = (control.position % 3) + 1;
+                        let next = control.position + 1;
+                        if (next > max) {
+                            next = min;
+                        }
+                        control.position = next;
                         button.textContent = control.position;
                         sendControlChange(control.id, control.position);
                     };
-                    
+
                     container.appendChild(button);
                     box.appendChild(container);
                 } else if (control.type === 'slider') {
@@ -412,17 +438,21 @@
                     
                     const slider = document.createElement('input');
                     slider.type = 'range';
-                    slider.min = '0';
-                    slider.max = '3';
-                    slider.value = control.position || '0';
+                    const sliderMin = control.min_value ?? 0;
+                    const sliderMax = control.max_value ?? 3;
+                    slider.min = sliderMin;
+                    slider.max = sliderMax;
+                    const sliderValue = (typeof control.position === 'number') ? control.position : sliderMin;
+                    control.position = sliderValue;
+                    slider.value = sliderValue;
                     slider.className = 'slider';
-                    
+
                     const value = document.createElement('div');
                     value.className = 'slider-value';
                     value.textContent = slider.value;
                     
                     slider.oninput = () => {
-                        control.position = parseInt(slider.value);
+                        control.position = parseInt(slider.value, 10);
                         value.textContent = slider.value;
                         sendControlChange(control.id, control.position);
                     };
@@ -435,10 +465,24 @@
                     button.className = 'button-control';
                     button.textContent = 'DRÜCK\nMICH!';
                     button.style.whiteSpace = 'pre';
+                    const min = control.min_value ?? 0;
+                    const max = control.max_value ?? 3;
+                    if (typeof control.position !== 'number') {
+                        control.position = min;
+                    }
+
+                    const counter = document.createElement('div');
+                    counter.className = 'button-counter';
+                    counter.textContent = control.position;
                     button.onclick = () => {
-                        control.position = (control.position || 0) + 1;
+                        let next = control.position + 1;
+                        if (next > max) {
+                            next = min;
+                        }
+                        control.position = next;
+                        counter.textContent = control.position;
                         sendControlChange(control.id, control.position);
-                        
+
                         // Visuelles Feedback
                         button.style.background = 'rgba(255, 255, 255, 0.5)';
                         setTimeout(() => {
@@ -446,8 +490,9 @@
                         }, 200);
                     };
                     box.appendChild(button);
+                    box.appendChild(counter);
                 }
-                
+
                 grid.appendChild(box);
             });
         }
